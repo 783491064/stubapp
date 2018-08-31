@@ -1,7 +1,9 @@
-package com.example.administrator.stubapp;
+package com.example.administrator.stubapp.activity;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+
+import com.example.administrator.stubapp.R;
 
 public class MainActivity extends AppCompatActivity {
 
