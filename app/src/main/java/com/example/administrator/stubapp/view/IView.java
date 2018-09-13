@@ -7,9 +7,9 @@ package com.example.administrator.stubapp.view;
 
 public interface IView {
     //展示加载进度旋转框
-    void showDialog();
+    void showProgress();
     //加载旋转框消失
-    void dismessDialog();
+    void cancleProgress();
     //显示错误信息
     void onError(String e);
 }

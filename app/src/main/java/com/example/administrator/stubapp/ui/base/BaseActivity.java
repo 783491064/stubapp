@@ -7,11 +7,15 @@ import android.os.Bundle;
 import android.os.PersistableBundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 
 import com.example.administrator.stubapp.app.AppManager;
+import com.example.administrator.stubapp.customView.LoadingDialog;
 
 import butterknife.ButterKnife;
+import butterknife.Unbinder;
 
 /**
  * 文件描述：activity的基类
@@ -20,13 +24,14 @@ import butterknife.ButterKnife;
 
 public abstract class BaseActivity extends AppCompatActivity {
     public Context mContext;
+    private Unbinder mBind;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         doBeforeSetcontentView();
         setContentView(getLayoutId());
-        ButterKnife.bind(this);
+        mBind = ButterKnife.bind(this);
         mContext = this;
         initMVP();
         initView();
@@ -75,6 +80,7 @@ public abstract class BaseActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         AppManager.getInstance().finishActivity(this);
+        mBind.unbind();
     }
 
     /**
@@ -132,5 +138,20 @@ public abstract class BaseActivity extends AppCompatActivity {
         }
         startActivityForResult(intent, requestCode);
     }
+
+    /**
+     * 开启浮动加载进度条
+     */
+    public void startProgressDialog(String msg) {
+        LoadingDialog.showLoadingProgress(this, msg, true);
+    }
+
+    /**
+     * 停止浮动加载进度条
+     */
+    public void stopProgressDialog() {
+        LoadingDialog.cancelLoading();
+    }
+
 }
 

@@ -1,5 +1,7 @@
 package com.example.administrator.stubapp.http;
 
+import com.example.administrator.stubapp.bean.AppBannerResult;
+
 import retrofit2.http.GET;
 import retrofit2.http.Query;
 import rx.Observable;
@@ -10,6 +12,6 @@ import rx.Observable;
  */
 
 public interface TGservice {
-    @GET("api/UserLearn")
-    Observable<String> getUserLearn();
+    @GET("api/AppBanner")
+    Observable<String> getUserLearn(@Query("s") String s,@Query("m") String m);
 }

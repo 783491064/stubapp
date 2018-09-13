@@ -4,7 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 /**
- * 文件描述：
+ * 文件描述：本地保存的SP
  * 作者：Created by BiJingCun on 2018/8/16.
  */
 

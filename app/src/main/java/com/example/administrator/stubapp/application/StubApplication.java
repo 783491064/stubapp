@@ -6,7 +6,7 @@ import android.content.Context;
 import com.example.administrator.stubapp.utils.StubPreferences;
 
 /**
- * 文件描述：
+ * 文件描述：自定义项目的Application 初始化一些基本信息
  * 作者：Created by BiJingCun on 2018/8/16.
  */
 
