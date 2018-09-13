@@ -1,4 +1,4 @@
-package com.example.administrator.stubapp.ui.base;
+package com.example.administrator.stubapp.base;
 
 import android.content.Context;
 import android.content.Intent;

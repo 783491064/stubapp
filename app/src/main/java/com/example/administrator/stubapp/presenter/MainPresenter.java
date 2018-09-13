@@ -3,7 +3,7 @@ package com.example.administrator.stubapp.presenter;
 
 import com.example.administrator.stubapp.bean.AppBannerResult;
 import com.example.administrator.stubapp.model.MainModel;
-import com.example.administrator.stubapp.ui.base.BasePresenter;
+import com.example.administrator.stubapp.base.BasePresenter;
 import com.example.administrator.stubapp.utils.DebugUtil;
 import com.example.administrator.stubapp.view.MainView;
 import rx.Subscriber;

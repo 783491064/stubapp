@@ -1,4 +1,4 @@
-package com.example.administrator.stubapp.ui.base;
+package com.example.administrator.stubapp.base;
 
 import rx.Subscription;
 import rx.subscriptions.CompositeSubscription;

@@ -9,7 +9,7 @@ import com.example.administrator.stubapp.R;
 import com.example.administrator.stubapp.app.AppManager;
 import com.example.administrator.stubapp.customView.LoadingPage;
 import com.example.administrator.stubapp.presenter.MainPresenter;
-import com.example.administrator.stubapp.ui.base.BaseMVPActivity;
+import com.example.administrator.stubapp.base.BaseMVPActivity;
 import com.example.administrator.stubapp.view.MainView;
 
 import butterknife.BindView;
@@ -83,7 +83,6 @@ public class MainActivity extends BaseMVPActivity<MainView, MainPresenter> imple
     @Override
     protected MainPresenter initPresenter() {
         mPresenter = new MainPresenter();
-        mPresenter.attch(this);
         return mPresenter;
     }
 
