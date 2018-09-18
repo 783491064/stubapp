@@ -164,4 +164,14 @@ public class FileManager {
                 extenPosi) : filePath.substring(filePosi + 1));
     }
 
+    /**
+     * 判断是否存在文件
+     * @param path
+     * @return
+     */
+    public static boolean existFile(String path) {
+        File path1 = new File(path);
+        return path1.exists();
+    }
+
 }
