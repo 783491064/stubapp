@@ -4,6 +4,7 @@ import android.text.TextUtils;
 
 import com.example.administrator.stubapp.bean.LiveLesson;
 import com.example.administrator.stubapp.db.dao.LiveLessonDao;
+import com.example.administrator.stubapp.download.DownState;
 import com.example.administrator.stubapp.utils.FileManager;
 
 import java.util.LinkedHashMap;
@@ -43,7 +44,7 @@ public class LiveLessonManager {
     /**
      * 异步更新视频信息
      */
-    private void updateLiveLessonLibrary() {
+    public void updateLiveLessonLibrary() {
         Observable.create(
                 new Observable.OnSubscribe<List<LiveLesson>>() {
                     @Override
@@ -62,10 +63,10 @@ public class LiveLessonManager {
                 .map(new Func1<LiveLesson, LiveLesson>() {
                     @Override
                     public LiveLesson call(LiveLesson mLiveLesson) {
-                        if (mLiveLesson.getDownload() == mLiveLesson.DOWNLOAD_COMPLETE && !TextUtils.isEmpty(mLiveLesson.getPath())) {
+                        if (mLiveLesson.getState() == DownState.FINISH && !TextUtils.isEmpty(mLiveLesson.getPath())) {
                             if (!FileManager.existFile(mLiveLesson.getPath())) {
-                                mLiveLesson.setDownload(mLiveLesson.DOWNLOAD_NONE);
-                                insertOrUpdateLiveLesson(mLiveLesson);
+                                mLiveLesson.setState(DownState.FINISH);
+                                updateLiveLesson(mLiveLesson);
                             }
                         }
                         return mLiveLesson;
@@ -84,11 +85,12 @@ public class LiveLessonManager {
                 });
     }
 
-    private void insertOrUpdateLiveLesson(final LiveLesson mLiveLesson) {
+    /*public void insertOrUpdateLiveLesson(final LiveLesson mLiveLesson) {
         Observable.create(
                 new Observable.OnSubscribe<LiveLesson>() {
                     @Override
                     public void call(Subscriber<? super LiveLesson> subscriber) {
+                        //本地临时数据的改变
                         updateSongFromLibrary(mLiveLesson);
                         dao.insertOrUpdateLiveLesson(mLiveLesson);
                         subscriber.onNext(mLiveLesson);
@@ -105,21 +107,89 @@ public class LiveLessonManager {
                     public void call(Throwable throwable) {
                     }
                 });
+    }*/
+
+    /**
+     * 插入数据
+     * @param mLiveLesson
+     */
+    public void insertLiveLesson(final LiveLesson mLiveLesson) {
+        Observable.create(
+                new Observable.OnSubscribe<LiveLesson>() {
+                    @Override
+                    public void call(Subscriber<? super LiveLesson> subscriber) {
+                        //本地临时数据的改变
+                        updateSongFromLibrary(mLiveLesson);
+                        dao.insertLiveLesson(mLiveLesson);
+                        subscriber.onNext(mLiveLesson);
+                    }
+                }).subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Action1<LiveLesson>() {
+                    @Override
+                    public void call(LiveLesson mLiveLesson) {
+                        songLibrary.put(mLiveLesson.getId(), mLiveLesson);
+                    }
+                }, new Action1<Throwable>() {
+                    @Override
+                    public void call(Throwable throwable) {
+                    }
+                });
     }
+
+    /**
+     * 更新数据
+     * @param mLiveLesson
+     */
+    public void updateLiveLesson(final LiveLesson mLiveLesson) {
+        Observable.create(
+                new Observable.OnSubscribe<LiveLesson>() {
+                    @Override
+                    public void call(Subscriber<? super LiveLesson> subscriber) {
+                        //本地临时数据的改变
+                        updateSongFromLibrary(mLiveLesson);
+                        dao.updateLiveLesson(mLiveLesson);
+                        subscriber.onNext(mLiveLesson);
+                    }
+                }).subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Action1<LiveLesson>() {
+                    @Override
+                    public void call(LiveLesson mLiveLesson) {
+                        songLibrary.put(mLiveLesson.getId(), mLiveLesson);
+                    }
+                }, new Action1<Throwable>() {
+                    @Override
+                    public void call(Throwable throwable) {
+                    }
+                });
+    }
+
+
+
+
+
+
+
 
     public void updateSongFromLibrary(LiveLesson mLiveLesson) {
         if (songLibrary.containsKey(mLiveLesson.getId())) {
             LiveLesson mLive = songLibrary.get(mLiveLesson.getId());
-            mLiveLesson.setDownload(mLive.getDownload());
+            mLive.setListener(mLive.getListener());//数据进度监听
+            mLiveLesson.setId(mLive.getId());
             mLiveLesson.setPath(mLive.getPath());
+            mLiveLesson.setState(mLive.getState());
+            mLiveLesson.setDownlength(mLive.getDownlength());
+            mLiveLesson.setSize(mLive.getSize());
         }
     }
 
-    public LiveLesson querySong(long sid) {
-        if (songLibrary.containsKey(sid)) {
+    public LiveLesson queryVideo(long sid) {
+/*        if (songLibrary.containsKey(sid)) {
             return songLibrary.get(sid);
-        }
-        return null;
+        }*/
+        LiveLesson liveLesson = dao.queryIsDownloaded(sid);
+        return liveLesson;
     }
 
     /**

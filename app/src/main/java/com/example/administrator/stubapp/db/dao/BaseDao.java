@@ -61,7 +61,8 @@ public class BaseDao {
      * 更新
      */
     public int update(String table, ContentValues values, String whereClause, String[] whereArgs){
-        return db.update(table,values,whereClause,whereArgs);
+        int update = db.update(table, values, whereClause, whereArgs);
+        return update;
     }
 
     /**
@@ -73,7 +74,8 @@ public class BaseDao {
      * @return
      */
     public long replace(String table, String nullColumnHack, ContentValues initialValues){
-        return db.replace(table,nullColumnHack,initialValues);
+        long replace = db.replace(table, nullColumnHack, initialValues);
+        return replace;
     }
 
 }

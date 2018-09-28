@@ -1,30 +1,58 @@
 package com.example.administrator.stubapp.ui.activity;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Environment;
+import android.os.SystemClock;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.example.administrator.stubapp.R;
 import com.example.administrator.stubapp.app.AppManager;
+import com.example.administrator.stubapp.bean.LiveLesson;
+import com.example.administrator.stubapp.customView.DownloadButton;
 import com.example.administrator.stubapp.customView.LoadingPage;
+import com.example.administrator.stubapp.db.LiveLessonManager;
+import com.example.administrator.stubapp.download.DownState;
+import com.example.administrator.stubapp.download.HttpDownManager;
+import com.example.administrator.stubapp.download.downloadListener.HttpDownOnNextListener;
 import com.example.administrator.stubapp.presenter.MainPresenter;
 import com.example.administrator.stubapp.base.BaseMVPActivity;
 import com.example.administrator.stubapp.view.MainView;
 
+import java.io.File;
+
 import butterknife.BindView;
 import butterknife.OnClick;
 
-public class MainActivity extends BaseMVPActivity<MainView, MainPresenter> implements MainView {
+import static com.example.administrator.stubapp.download.DownState.*;
+
+public class MainActivity extends BaseMVPActivity<MainView, MainPresenter> implements MainView, HttpDownManager.DownloadObserver {
 
     private MainPresenter mPresenter;
     @BindView(R.id.bt_getData)
     Button bt_getData;
+    @BindView(R.id.btn_download)
+    DownloadButton btn_download;
     @BindView(R.id.fl_content)
     RelativeLayout fl_content;
+    @BindView(R.id.pb)
+    ProgressBar pb;
+    @BindView(R.id.re)
+    Button re;
     private LoadingPage mLoadingPage;
     private long firstExitTime = 0;
     private static final int EXIT_TIME = 2000;
+    private File outFile;//下载文件存储的位置
+    private LiveLesson mLiveLesson;//数据库查询出来的数据
+    private HttpDownManager mHttpDownManager;//下载请求的类
+    private LiveLessonManager mDownUtil;
+    private String mUrl;
 
     @Override
     protected void setStatusBarColor() {
@@ -41,8 +69,24 @@ public class MainActivity extends BaseMVPActivity<MainView, MainPresenter> imple
         return R.layout.activity_main;
     }
 
+
     @Override
     protected void initView() {
+        /**
+         * 动态获取权限，Android 6.0 新特性，一些保护权限，除了要在AndroidManifest中声明权限，还要使用如下代码动态获取
+         */
+        if (Build.VERSION.SDK_INT >= 23) {
+            int REQUEST_CODE_CONTACT = 101;
+            String[] permissions = {Manifest.permission.WRITE_EXTERNAL_STORAGE};
+            //验证是否许可权限
+            for (String str : permissions) {
+                if (this.checkSelfPermission(str) != PackageManager.PERMISSION_GRANTED) {
+                    //申请权限
+                    this.requestPermissions(permissions, REQUEST_CODE_CONTACT);
+                    return;
+                }
+            }
+        }
         mLoadingPage = new LoadingPage(mContext) {
             @Override
             public void refresh() {
@@ -55,6 +99,11 @@ public class MainActivity extends BaseMVPActivity<MainView, MainPresenter> imple
             }
         };
         fl_content.addView(mLoadingPage);
+        //测试下载视频
+        // 地址
+        mUrl = "http://appdlc.hicloud.com/dl/appdl/application/apk/54/54da7ff6a97f44b3950f8debc8b8b882/cn.eclicks.drivingtest.1705151637.apk?sign=c9d81011e610010520007000@7ED2A239A80FA54D27BEFAACCC1AB7F3&cno=4010001&source=HiAd&listId=40&position=2&hcrId=0D855BF76D854F5ABD8EF2C81BCF46AA&extendStr=a28f8b52f26ff78840b24bedd884271d%3BcdrInfo%3A20170518203514aps09188440%5E%7BopType%7D%5E7798%5EC188770%5E40%5E2%5E1c578c5865f511e6bc3800163e0b0f53%5E17453%5Ec1737895f9ab9f0f2ab194c30e1e76f6d97d4d7a814b70bbe407de74ebc30d70%5E%5EU0NFOn5TUkM6NDA%5E2017-05-18+20%3A35%3A14%5E5%5E%E8%8D%A3%E8%80%807%5E0.000120%5E1%5E2.17%5E2.17%5E0.8%5E900086000000033869%5E20358%5E%5E%5E%5E7.2.3%5E1495110901735%5E0%3BisAdTag%3A0%3B%3BserviceType%3A0%3Bisshake%3A0%3Bs%3A1495110914770%3Btrace%3A7a33dd5251e64e80ba4bb2f38ada8f8b%3BlayoutId%3A806929&encryptType=1";
+        mHttpDownManager = HttpDownManager.getInstance();
+        mHttpDownManager.registerObserver(this);
     }
 
     @Override
@@ -62,7 +111,7 @@ public class MainActivity extends BaseMVPActivity<MainView, MainPresenter> imple
 
     }
 
-    @OnClick(R.id.bt_getData)
+    @OnClick({R.id.bt_getData,R.id.re})
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.bt_getData:
@@ -70,7 +119,78 @@ public class MainActivity extends BaseMVPActivity<MainView, MainPresenter> imple
                     mPresenter.getData();
                 }
                 break;
+            case R.id.re:
+                mDownUtil = LiveLessonManager.getInstance();
+                mLiveLesson = mDownUtil.queryVideo(1);
+                if (mLiveLesson == null) {
+                    ///storage/emulated/0/Download
+                    outFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "demo" + ".apk");
+                }
+                setDownload();
+                break;
         }
+    }
+
+    /**
+     * 测试开始下载 断点续传
+     */
+    private void setDownload() {
+        if (mLiveLesson == null) {
+            //从未下载
+            Toast.makeText(mContext, "还没有下载过", Toast.LENGTH_SHORT).show();
+            btn_download.setText("下载");
+        } else {
+            if (mLiveLesson.getState() == DownState.DOWN) {
+                btn_download.setText("下载中");
+                btn_download.setState(DownloadButton.STATUS_PROGRESS_DOWNLOADING);
+                mLiveLesson.setListener(downLoadListener);//目的是调用updateProgress中的setProgress(progress);更新进度
+                mHttpDownManager.startDown(mLiveLesson);
+            } else if (mLiveLesson.getState() == DownState.PAUSE) {
+                btn_download.setText("下载暂停");
+                btn_download.setState(DownloadButton.STATUS_PROGRESS_PAUSE);
+                mLiveLesson.setListener(downLoadListener);//目的是调用updateProgress中的setProgress(progress);更新进度
+                mHttpDownManager.pause(mLiveLesson);
+            } else if (mLiveLesson.getState() == DownState.FINISH) {
+                btn_download.setText("下载完成");
+                btn_download.setState(DownloadButton.STATUS_PROGRESS_FINISH);
+            }
+
+        }
+
+        btn_download.setStateChangeListener(new DownloadButton.StateChangeListener() {
+            @Override
+            public void onPauseTask() {
+                mHttpDownManager.pause(mLiveLesson);
+            }
+
+            @Override
+            public void onFinishTask() {
+                Toast.makeText(mContext, "去安装程序", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onLoadingTask() {
+                pb.setMax(100);
+                if (mLiveLesson == null) {
+                    //重来没有下载过，初始化下载条目的数据；
+                    mLiveLesson = new LiveLesson(mUrl);
+                    mLiveLesson.setListener(downLoadListener);//数据进度监听
+                    mLiveLesson.setId((long) 1);
+                    mLiveLesson.setPath(outFile.getAbsolutePath());
+                    mLiveLesson.setState(DownState.START);
+                    mLiveLesson.setDownlength((long) 0);
+                    mLiveLesson.setSize((long) 69728214);
+                    //数据库保存下载数据
+                    mDownUtil.insertLiveLesson(mLiveLesson);
+                }
+                //如果下载过，而且没有下载完就继续下载；
+                if (mLiveLesson.getState() != DownState.FINISH) {
+                    mHttpDownManager.startDown(mLiveLesson);
+                }
+            }
+        });
+
+
     }
 
     @Override
@@ -117,6 +237,63 @@ public class MainActivity extends BaseMVPActivity<MainView, MainPresenter> imple
             firstExitTime = System.currentTimeMillis();
             Toast.makeText(this, "再按一次回到桌面",
                     Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
+    private HttpDownOnNextListener downLoadListener = new HttpDownOnNextListener() {
+        @Override
+        public void onNext(Object o) {
+        }
+
+        @Override
+        public void onStart() {
+            Toast.makeText(MainActivity.this, "开始下载了", Toast.LENGTH_SHORT).show();
+        }
+
+        @Override
+        public void onPuse() {
+            Toast.makeText(MainActivity.this, "下载暂停了", Toast.LENGTH_SHORT).show();
+        }
+
+        @Override
+        public void onComplete() {
+            Toast.makeText(MainActivity.this, "下载完成", Toast.LENGTH_SHORT).show();
+        }
+
+        @Override
+        public void updateProgress(long readLength, long countLength) {
+            Log.d("下载","下载进度:"+readLength+"总长度："+countLength);
+            int progress = (int) ((readLength * 100) / countLength);
+            pb.setProgress(progress);
+        }
+    };
+
+
+    @Override
+    public void onDownloadStateChanged(final LiveLesson info) {
+        if (info.getState() == DownState.FINISH) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    SystemClock.sleep(3000);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (mDownUtil != null && info != null)
+                                mDownUtil.updateLiveLesson(info);
+                        }
+                    });
+                }
+            }).start();
+        }
+
+    }
+
+    @Override
+    public void onDownloadProgressed(LiveLesson info) {
+        if (info != null && info.getId() == mLiveLesson.getId()) {
+            pb.setProgress((int) (100 * info.getDownlength() / info.getSize()));
         }
     }
 }

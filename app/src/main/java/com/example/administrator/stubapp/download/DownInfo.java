@@ -1,43 +1,36 @@
-package com.example.administrator.stubapp.bean;
+package com.example.administrator.stubapp.download;
 
-import android.net.Uri;
-import android.text.TextUtils;
-
-import com.example.administrator.stubapp.download.DownState;
-import com.example.administrator.stubapp.download.HttpDownService;
 import com.example.administrator.stubapp.download.downloadListener.HttpDownOnNextListener;
 
-import java.io.Serializable;
-
 /**
- * 文件描述：视频的实体类
- * 作者：Created by BiJingCun on 2018/9/18.
+ * 文件描述：下载请求数据的基础类
+ * 作者：Created by BiJingCun on 2018/9/20.
  */
 
-public class LiveLesson implements Serializable {
-    private Long id;//id
-    private String title;//标题
-    private String url;//下载路径
-    private Long size;//大小
-    private int duration;//总时长
-    private Long date;//观看的日期
-    private int download;//下载状态
-    private String path;//本地存储路径
-    private Long downlength;//下载的长度
+public class DownInfo {
+    private Long id;
+    private String title;
+    private String url;
+    private Long size;
+    private int duration;
+    private Long date;
+    private int download;
+    private String path;
+    private Long downlength;
     private HttpDownOnNextListener listener;
     private HttpDownService service;
     private int stateInte;//数据库的保存状态
 
-    public LiveLesson(String mUrl, HttpDownOnNextListener mListener) {
+    public DownInfo(String mUrl, HttpDownOnNextListener mListener) {
         url = mUrl;
         listener = mListener;
     }
 
-    public LiveLesson(String url) {
+    public DownInfo(String url) {
         setUrl(url);
     }
 
-    public LiveLesson(Long mId, String mTitle, String mUrl, Long mSize, int mDuration, Long mDate, int mDownload, String mPath, Long mDownlength, int mStateInte) {
+    public DownInfo(Long mId, String mTitle, String mUrl, Long mSize, int mDuration, Long mDate, int mDownload, String mPath, Long mDownlength, int mStateInte) {
         id = mId;
         title = mTitle;
         url = mUrl;
@@ -52,11 +45,10 @@ public class LiveLesson implements Serializable {
 
     /**
      * 获取下载状态
-     *
      * @return
      */
     public DownState getState() {
-        switch (getStateInte()) {
+        switch (getStateInte()){
             case 0:
                 return DownState.START;
             case 1:
@@ -75,13 +67,20 @@ public class LiveLesson implements Serializable {
 
     /**
      * 设置下载状态
-     *
      * @param state
      */
     public void setState(DownState state) {
         setStateInte(state.getState());
     }
 
+
+    public int getStateInte() {
+        return stateInte;
+    }
+
+    public void setStateInte(int mStateInte) {
+        stateInte = mStateInte;
+    }
 
     public Long getId() {
         return id;
@@ -169,13 +168,5 @@ public class LiveLesson implements Serializable {
 
     public void setService(HttpDownService mService) {
         service = mService;
-    }
-
-    public int getStateInte() {
-        return stateInte;
-    }
-
-    public void setStateInte(int mStateInte) {
-        stateInte = mStateInte;
     }
 }
