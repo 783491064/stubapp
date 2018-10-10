@@ -8,6 +8,9 @@ import com.example.administrator.stubapp.download.HttpDownService;
 import com.example.administrator.stubapp.download.downloadListener.HttpDownOnNextListener;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 文件描述：视频的实体类
@@ -27,6 +30,28 @@ public class LiveLesson implements Serializable {
     private HttpDownOnNextListener listener;
     private HttpDownService service;
     private int stateInte;//数据库的保存状态
+    private String m3u8Path;//改造后的.m3u8存储路径
+    private String key;//解密的KEY文件的保存路径;
+    private String downIndex="0";//应该下载的ts片段的序号；
+
+    public String getDownIndex() {
+        return downIndex;
+    }
+
+    public void setDownIndex(String mDownIndex) {
+        downIndex = mDownIndex;
+    }
+
+    private LinkedHashMap<String, String> downloaderHashMap = new LinkedHashMap<>();//下载的片段个数 key 原3u8片段下载路径  v 片段存储的路径
+
+    public LinkedHashMap<String, String> getDownloaderHashMap() {
+        return downloaderHashMap;
+    }
+
+    public void setDownloaderHashMap(LinkedHashMap<String, String> mDownloaderHashMap) {
+        downloaderHashMap = mDownloaderHashMap;
+    }
+
 
     public LiveLesson(String mUrl, HttpDownOnNextListener mListener) {
         url = mUrl;
@@ -37,7 +62,7 @@ public class LiveLesson implements Serializable {
         setUrl(url);
     }
 
-    public LiveLesson(Long mId, String mTitle, String mUrl, Long mSize, int mDuration, Long mDate, int mDownload, String mPath, Long mDownlength, int mStateInte) {
+    public LiveLesson(Long mId, String mTitle, String mUrl, Long mSize, int mDuration, Long mDate, int mDownload, String mPath, Long mDownlength, int mStateInte, String m3u8Path, String mKey) {
         id = mId;
         title = mTitle;
         url = mUrl;
@@ -48,6 +73,8 @@ public class LiveLesson implements Serializable {
         path = mPath;
         downlength = mDownlength;
         stateInte = mStateInte;
+        m3u8Path = m3u8Path;
+        key = mKey;
     }
 
     /**
@@ -177,5 +204,21 @@ public class LiveLesson implements Serializable {
 
     public void setStateInte(int mStateInte) {
         stateInte = mStateInte;
+    }
+
+    public String getM3u8DownloadPath() {
+        return m3u8Path;
+    }
+
+    public void setM3u8DownloadPath(String mM3u8DownloadPath) {
+        m3u8Path = mM3u8DownloadPath;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public void setKey(String mKey) {
+        key = mKey;
     }
 }

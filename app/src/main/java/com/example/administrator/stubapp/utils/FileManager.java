@@ -3,13 +3,18 @@ package com.example.administrator.stubapp.utils;
 import android.content.Context;
 import android.os.Environment;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.example.administrator.stubapp.bean.LiveLesson;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -189,6 +194,24 @@ public class FileManager {
         return path1.exists();
     }
 
+    public static void WriteTxtFile(String strcontent, String strFilePath) {
+        try {
+            File file = new File(strFilePath);
+            if (file.exists()) {
+                file.delete();
+            }
+            if (!file.exists()) {
+                file.createNewFile();
+            }
+
+            RandomAccessFile raf = new RandomAccessFile(file, "rw");
+            raf.seek(0);
+            raf.write(strcontent.getBytes());
+            raf.close();
+        } catch (Exception e) {
+        }
+    }
+
     /**
      * 写入文件
      *
@@ -203,11 +226,13 @@ public class FileManager {
         }
         //设置文件总长度
         long allLenght;
-        if (mInfo.getSize() == 0) {
-            allLenght = mResponseBody.contentLength();
-        } else {
-            allLenght = mInfo.getSize();
-        }
+        allLenght = mResponseBody.contentLength();
+
+//        if (mInfo.getSize() == 0) {
+//            allLenght = mResponseBody.contentLength();
+//        } else {
+//            allLenght = mInfo.getSize();
+//        }
         /**
          * FileChannel 优势：
          多线程并发读写，并发性；
@@ -240,5 +265,49 @@ public class FileManager {
         } catch (FileNotFoundException mE) {
             mE.printStackTrace();
         }
+    }
+
+    /**
+     * 读取m3u8的文件文件夹文件
+     * @param strFilePath
+     * @return
+     */
+    public static String ReadTxtFile(String strFilePath)
+    {
+        String path = strFilePath;
+        String content = ""; //文件内容字符串
+        //打开文件
+        File file = new File(path);
+        //如果path是传递过来的参数，可以做一个非目录的判断
+        if (file.isDirectory())
+        {
+            Log.e("TestFile", "The File doesn't not exist.");
+        }
+        else
+        {
+            try {
+                InputStream instream = new FileInputStream(file);
+                if (instream != null)
+                {
+                    InputStreamReader inputreader = new InputStreamReader(instream);
+                    BufferedReader buffreader = new BufferedReader(inputreader);
+                    String line;
+                    //分行读取
+                    while (( line = buffreader.readLine()) != null) {
+                        content += line + "\n";
+                    }
+                    instream.close();
+                }
+            }
+            catch (java.io.FileNotFoundException e)
+            {
+                Log.e("TestFile", "The File doesn't not exist.");
+            }
+            catch (IOException e)
+            {
+                Log.e("TestFile", e.getMessage());
+            }
+        }
+        return content;
     }
 }

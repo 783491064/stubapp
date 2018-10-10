@@ -1,5 +1,10 @@
 package com.example.administrator.stubapp.download.downloadListener;
 
+import android.text.TextUtils;
+import android.widget.TextView;
+
+import com.example.administrator.stubapp.utils.StubPreferences;
+
 import java.io.IOException;
 
 import okhttp3.MediaType;
@@ -19,10 +24,15 @@ public class DownloadResponseBody  extends ResponseBody{
     private ResponseBody responseBody;
     private DownloadProgressListener progressListener;
     private BufferedSource bufferedSource;
+    private int size=0;
+    private String id;
+    int hasDown = 0;
 
-    public DownloadResponseBody(ResponseBody mBody, DownloadProgressListener mListener) {
+    public DownloadResponseBody(ResponseBody mBody, DownloadProgressListener mListener,int size,String id) {
         this.responseBody = mBody;
         this.progressListener = mListener;
+        this.size=size;
+        this.id=id;
     }
 
     @Override
@@ -45,14 +55,24 @@ public class DownloadResponseBody  extends ResponseBody{
 
     private Source source(Source source){
         return new ForwardingSource(source) {
-            long totalBytesRead = 0L;
             @Override
             public long read(Buffer sink, long byteCount) throws IOException {
                 long bytesRead = super.read(sink, byteCount);
                 // read() returns the number of bytes read, or -1 if this source is exhausted.
-                totalBytesRead += bytesRead != -1 ? bytesRead : 0;
-                if(null!=progressListener){
-                    progressListener.update(totalBytesRead,responseBody.contentLength(),bytesRead == -1);
+                String stringValue = StubPreferences.getStringValue(id);//还没有下载的片段数
+                if(!TextUtils.isEmpty(stringValue)){
+                    String[] split = stringValue.split(",");
+                    if(null!=progressListener){
+                        if(bytesRead==-1){//下载完一个片段
+                            hasDown=size-split.length+1;//下载完一个片段 hasDown增加一个
+                            if(hasDown==size){
+                                progressListener.update(hasDown,size,true);
+                            }else{
+                                progressListener.update(hasDown,size,false);
+                            }
+                        }
+                    }
+
                 }
                 return bytesRead;
             }

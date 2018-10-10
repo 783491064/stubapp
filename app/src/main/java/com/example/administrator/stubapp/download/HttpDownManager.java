@@ -65,6 +65,7 @@ public class HttpDownManager{
         downInfos = new HashSet<>();
         subMap = new HashMap<>();
         dbUtil = LiveLessonManager.getInstance();
+
     }
 
     /**
@@ -86,24 +87,35 @@ public class HttpDownManager{
      * //http://cdnaliyunv.tianguiedu.com/201803/e342b754-6ae3-4d55-bef6-dbfef14d94c0/low.m3u8
      * // id  153
      */
-    public void startDown(final LiveLesson info) {
+    public void startDown(final LiveLesson info,boolean hasDown) {
         //正在下载不做处理
-        if (info == null || subMap.get(info.getUrl()) != null) {
-            subMap.get(info.getUrl()).setDownInfo(info);
-            return;
-        }
+//        if (info == null || subMap.get(info.getUrl()) != null) {
+//            ProgressDownSubscriber subscriber = subMap.get(info.getUrl());
+//            subscriber.setDownInfo(info);
+//            return;
+//        }
         //添加回调处理类
         final ProgressDownSubscriber subscriber = new ProgressDownSubscriber(info);
         subscriber.setHttpDownManager(this);
         //记录回调sub 如果有多个任务下载,将任务放在map结合中
         subMap.put(info.getUrl(), subscriber);
         StubPreferences.setStringValue(String.valueOf(info.getPath()),"");//保存下载进度
-
-        //1先下载 .m3u8 文件
-        String path = info.getPath();
-        path = path + "/";
-        String loadPath3u8 = "http://cdnaliyunv.tianguiedu.com/201803/e342b754-6ae3-4d55-bef6-dbfef14d94c0/low.m3u8";
+        String path = info.getPath()+"/";
         final String finalPath = path;
+        if(hasDown){
+            LinkedHashMap downloaderHashMap=info.getDownloaderHashMap();
+            HttpDownService httpDownService = info.getService();
+            int i = Integer.parseInt(info.getDownIndex());
+            info.setDownloaderHashMap(downloaderHashMap);
+            info.setDownIndex(String.valueOf(i));
+            downLoadTsVideos(info, downloaderHashMap, subscriber, httpDownService);
+            return;
+        }
+
+        // 没有下载过的 先下载 .m3u8 文件
+
+//        String loadPath3u8 = "http://cdnaliyunv.tianguiedu.com/201803/e342b754-6ae3-4d55-bef6-dbfef14d94c0/low.m3u8";
+        String loadPath3u8 = "http://cdnaliyunv.tianguiedu.com/201802/3ed31f9f-d30b-4c06-8eba-cd2e39f2a146/low.m3u8";
         OkGo.<File>get(loadPath3u8).tag(HttpDownManager.this).execute(new FileCallback(finalPath, "output.m3u8") {
             @Override
             public void onSuccess(Response<File> response) {
@@ -149,7 +161,7 @@ public class HttpDownManager{
                                     .compile("[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}/output\\d+.ts");
                             Matcher m = p.matcher(replacecontent);
                             int i = 0;
-                            ConcurrentHashMap<String, String> downloaderHashMap = info.getDownloaderHashMap();
+                            LinkedHashMap<String, String> downloaderHashMap = info.getDownloaderHashMap();
                             while (m.find()) {
 
                                 String videoPath = i + ".ts";
@@ -195,11 +207,13 @@ public class HttpDownManager{
 
     }
 
-    private void downLoadTsVideos(final LiveLesson mInfo, final ConcurrentHashMap<String, String> mDownloaderHashMap, ProgressDownSubscriber mSubscriber, final HttpDownService mHttpDownService) {
+    private void downLoadTsVideos(final LiveLesson mInfo, final LinkedHashMap<String, String> mDownloaderHashMap, ProgressDownSubscriber mSubscriber, final HttpDownService mHttpDownService) {
         //得到RX对象上一次下载的位置开始下载
         final String downIndex = mInfo.getDownIndex();
         int size = mDownloaderHashMap.entrySet().size();//一共的视频下载个数
+        mInfo.setSize((long) size);
         int noDownCount = size - Integer.parseInt(downIndex);//没有下载的视频数
+        dbUtil.updateLiveLesson(mInfo);
         List<String> values = new ArrayList<>();
         String indexText="";
         boolean toDown=false;
@@ -223,7 +237,8 @@ public class HttpDownManager{
                 .concatMap(new Func1<String, Observable<ResponseBody>>() {
                     @Override
                     public Observable<ResponseBody> call(String tsUrl) {
-                        String url = new String(MessageFormat.format("{0}?app=android&ukey={1}{2}", "http://cdnaliyunv.tianguiedu.com/201803/e342b754-6ae3-4d55-bef6-dbfef14d94c0/" + tsUrl,
+
+                        String url = new String(MessageFormat.format("{0}?app=android&ukey={1}{2}", "http://cdnaliyunv.tianguiedu.com/201802/3ed31f9f-d30b-4c06-8eba-cd2e39f2a146/" + tsUrl,
                                 "461", System.currentTimeMillis()));
                         Observable<ResponseBody> download = mHttpDownService.download("bytes=0" + "-", url);
                         return download;
@@ -237,7 +252,8 @@ public class HttpDownManager{
                             //写文件(真正写是在这里)
                             String stringValue = StubPreferences.getStringValue(String.valueOf(mInfo.getId()));
                             String[] split = stringValue.split(",");
-                            String substring = split[0].substring(0, 1);
+                            String[] split1 = split[0].split("\\.");
+                            String substring = split1[0];
                             int i = Integer.parseInt(substring);
                             writeCache(mResponseBody, new File(mInfo.getPath() + "/" + i + ".ts"), mInfo,i,stringValue);
                         } catch (IOException e) {
@@ -291,9 +307,10 @@ public class HttpDownManager{
             if (randomAccessFile != null) {
                 randomAccessFile.close();
             }
-            String replace = value.replace(i + ".ts,", "");
-            StubPreferences.setStringValue(String.valueOf(mInfo.getId()), replace);
-        } catch (FileNotFoundException mE) {
+            String s = i + ".ts,";
+            String substring = value.substring(s.length(),value.length());
+            StubPreferences.setStringValue(String.valueOf(mInfo.getId()), substring);
+        } catch (Exception mE) {
             mE.printStackTrace();
         }
     }
@@ -353,6 +370,12 @@ public class HttpDownManager{
         mDownInfo.setState(DownState.PAUSE);
         if (mDownInfo.getListener() != null)
             mDownInfo.getListener().onPuse();
+        String stringValue = StubPreferences.getStringValue(String.valueOf(mDownInfo.getId()));
+        LiveLesson liveLesson = dbUtil.queryVideo(mDownInfo.getId());
+        Long size = liveLesson.getSize();
+        String[] split = stringValue.split(",");
+        String s = String.valueOf(size - split.length);
+        mDownInfo.setDownIndex(s);
         notifyDownloadStateChanged(mDownInfo);
         if (subMap.containsKey(mDownInfo.getUrl())) {
             ProgressDownSubscriber subscriber = subMap.get(mDownInfo.getUrl());

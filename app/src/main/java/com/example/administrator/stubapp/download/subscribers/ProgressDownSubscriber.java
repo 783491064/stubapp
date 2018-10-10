@@ -70,13 +70,12 @@ public class ProgressDownSubscriber<T> extends Subscriber<T> implements Download
     }
 
     @Override
-    public void update(long read, long count, boolean done) {
-        if (downInfo.getSize() > count) {
-            read = downInfo.getSize() - count + read;
-        } else {
-            downInfo.setSize(count);
+    public void update(long read, final long count, final boolean done) {
+        if(done){
+            downInfo.setDownlength(count);
+        }else{
+            downInfo.setDownlength(read);
         }
-        downInfo.setDownlength(read);
         //接受进度消息，造成UI阻塞，如果不需要显示进度可以去掉实现逻辑，减少压力
         rx.Observable.just(read).observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Action1<Long>() {
@@ -85,13 +84,15 @@ public class ProgressDownSubscriber<T> extends Subscriber<T> implements Download
                         //如果暂停或者停止状态延迟，不需要继续发送回调，影响现实
                         if (downInfo.getState() == DownState.PAUSE || downInfo.getState() == DownState.STOP)
                             return;
-                        downInfo.setState(DownState.DOWN);
+                        if(done){
+                            downInfo.setState(DownState.DOWN);
+                        }
                         if (manager != null) {
                             manager.notifyDownloadStateChanged(downInfo);
                             manager.notifyDownloadProgressed(downInfo);
                         }
                         if (mSubscriberOnNextListener.get() != null) {
-                            mSubscriberOnNextListener.get().updateProgress(mLong, downInfo.getSize());
+                            mSubscriberOnNextListener.get().updateProgress(mLong, count);
                         }
                     }
                 });

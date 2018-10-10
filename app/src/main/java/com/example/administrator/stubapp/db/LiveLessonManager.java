@@ -38,7 +38,7 @@ public class LiveLessonManager {
     public LiveLessonManager() {
         dao = new LiveLessonDao();
         songLibrary = new LinkedHashMap<>();
-        updateLiveLessonLibrary();
+//        updateLiveLessonLibrary();
     }
 
     /**

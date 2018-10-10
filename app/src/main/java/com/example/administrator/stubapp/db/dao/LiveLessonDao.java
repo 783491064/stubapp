@@ -27,8 +27,8 @@ public class LiveLessonDao extends BaseDao {
     private final static String COLUMN_PATH = "path";//存储路径
     private final static String COLUMN_DOWNLENGTH = "downlength";//下载的长度
     private final static String COLUMN_STATEINTE = "stateinte";//下载状态
-
-
+    private final static String COLUMN_3U8PATH = "m3u8path";//3U8改造后的文件存储路径
+    private final static String COLUMN_KEYPATH="keypath";//视频的解密key的存储路径
     /**
      * 建表
      */
@@ -45,7 +45,9 @@ public class LiveLessonDao extends BaseDao {
         sb.append(COLUMN_DOWNLOAD + " INTEGER,");
         sb.append(COLUMN_PATH + " TEXT,");
         sb.append(COLUMN_DOWNLENGTH + " BIGINT,");
-        sb.append(COLUMN_STATEINTE+ " INTEGER");
+        sb.append(COLUMN_STATEINTE + " INTEGER,");
+        sb.append(COLUMN_3U8PATH + " TEXT,");
+        sb.append(COLUMN_KEYPATH + " TEXT");
         sb.append(");");
         return sb.toString();
     }
@@ -80,11 +82,13 @@ public class LiveLessonDao extends BaseDao {
         String path = cursor.getString(cursor.getColumnIndex(COLUMN_PATH));
         long downlength = cursor.getLong(cursor.getColumnIndex(COLUMN_DOWNLENGTH));
         int stateint = cursor.getInt(cursor.getColumnIndex(COLUMN_STATEINTE));
+        String m3u8path = cursor.getString(cursor.getColumnIndex(COLUMN_3U8PATH));
+        String keypath = cursor.getString(cursor.getColumnIndex(COLUMN_KEYPATH));
         boolean status = false;
         if (download == 1 && !TextUtils.isEmpty(path) || !TextUtils.isEmpty(url)) {
             status = true;
         }
-        LiveLesson liveLesson = new LiveLesson(id, title, url, size, duration, date, download, path,downlength, stateint);
+        LiveLesson liveLesson = new LiveLesson(id, title, url, size, duration, date, download, path,downlength, stateint,m3u8path,keypath);
         return liveLesson;
     }
 
@@ -151,6 +155,8 @@ public class LiveLessonDao extends BaseDao {
         values.put(COLUMN_PATH, mLiveLesson.getPath());
         values.put(COLUMN_DOWNLENGTH, mLiveLesson.getDownlength());
         values.put(COLUMN_STATEINTE, mLiveLesson.getStateInte());
+        values.put(COLUMN_3U8PATH, mLiveLesson.getM3u8DownloadPath());
+        values.put(COLUMN_KEYPATH, mLiveLesson.getKey());
         return values;
     }
 
