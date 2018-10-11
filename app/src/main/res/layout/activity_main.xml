@@ -28,6 +28,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@+id/pb"
-        android:text="cha"/>
+        android:text="开始播放"/>
+    <io.vov.vitamio.widget.VideoView
+        android:layout_below="@+id/re"
+        android:id="@+id/vv_main"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
 
 </RelativeLayout>

@@ -2,6 +2,7 @@ package com.example.administrator.stubapp.ui.activity;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.SystemClock;
@@ -29,11 +30,16 @@ import java.io.File;
 
 import butterknife.BindView;
 import butterknife.OnClick;
+import io.vov.vitamio.LibsChecker;
+import io.vov.vitamio.MediaPlayer;
+import io.vov.vitamio.Vitamio;
+import io.vov.vitamio.widget.MediaController;
+import io.vov.vitamio.widget.VideoView;
 import rx.Observable;
 
 import static com.example.administrator.stubapp.download.DownState.*;
 
-public class MainActivity extends BaseMVPActivity<MainView, MainPresenter> implements MainView, HttpDownManager.DownloadObserver {
+public class MainActivity extends BaseMVPActivity<MainView, MainPresenter> implements MainView, HttpDownManager.DownloadObserver,MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener  {
 
     private MainPresenter mPresenter;
     @BindView(R.id.bt_getData)
@@ -46,6 +52,9 @@ public class MainActivity extends BaseMVPActivity<MainView, MainPresenter> imple
     ProgressBar pb;
     @BindView(R.id.re)
     Button re;
+    @BindView(R.id.vv_main)
+    VideoView vv_main;
+
     private LoadingPage mLoadingPage;
     private long firstExitTime = 0;
     private static final int EXIT_TIME = 2000;
@@ -72,6 +81,7 @@ public class MainActivity extends BaseMVPActivity<MainView, MainPresenter> imple
 
     @Override
     protected void initView() {
+        Vitamio.initialize(this);
         mLoadingPage = new LoadingPage(mContext) {
             @Override
             public void refresh() {
@@ -124,6 +134,20 @@ public class MainActivity extends BaseMVPActivity<MainView, MainPresenter> imple
                 //http://cdnaliyunv.tianguiedu.com/201803/e342b754-6ae3-4d55-bef6-dbfef14d94c0/low.m3u8
                 // id  153
 //                setDownload();
+//                http://cdnaliyunv.tianguiedu.com/201806/f4b51ab2-a478-466f-b5eb-7fd572b49c24/low.m3u8
+                //检查vitamio框架是否可用
+                if (!LibsChecker.checkVitamioLibs(this)) {
+                    return;
+                }
+//                vv_main.setVideoURI(Uri.parse("http://cdnaliyunv.tianguiedu.com/201806/f4b51ab2-a478-466f-b5eb-7fd572b49c24/low.m3u8"));
+//                vv_main.setVideoURI(Uri.parse("http://flashmedia.eastday.com/newdate/news/2016-11/shznews1125-19.mp4"));
+                vv_main.setVideoPath("/storage/emulated/0/Download/video153/newoutput.m3u8");///storage/emulated/0/Android/data/com.tiangui/TGKT/downloads/video153/output.m3u8
+                vv_main.setMediaController(new MediaController(this));
+
+                //设置监听
+                vv_main.setOnPreparedListener(this);
+                vv_main.setOnErrorListener(this);
+                vv_main.setOnCompletionListener(this);
                 break;
         }
     }
@@ -316,5 +340,22 @@ public class MainActivity extends BaseMVPActivity<MainView, MainPresenter> imple
         if (info != null) {
             pb.setProgress((int) (100 * info.getDownlength() / info.getSize()));
         }
+    }
+
+    @Override
+    public void onPrepared(MediaPlayer mp) {
+        Toast.makeText(this,"准备好了", Toast.LENGTH_LONG).show();
+        vv_main.start();//开始播放
+    }
+
+    @Override
+    public void onCompletion(MediaPlayer mp) {
+        Toast.makeText(this,"播放完成", Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public boolean onError(MediaPlayer mp, int what, int extra) {
+        Toast.makeText(this,"Error", Toast.LENGTH_LONG).show();
+        return false;
     }
 }

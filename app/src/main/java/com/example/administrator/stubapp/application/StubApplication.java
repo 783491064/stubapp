@@ -9,6 +9,7 @@ import com.lzy.okgo.OkGo;
 import com.lzy.okgo.cache.CacheEntity;
 import com.lzy.okgo.cache.CacheMode;
 
+import io.vov.vitamio.Vitamio;
 import okhttp3.OkHttpClient;
 
 /**
@@ -36,6 +37,6 @@ public class StubApplication extends Application {
                 .setCacheMode(CacheMode.NO_CACHE)               //全局统一缓存模式，默认不使用缓存，可以不传
                 .setCacheTime(CacheEntity.CACHE_NEVER_EXPIRE)   //全局统一缓存时间，默认永不过期，可以不传
                 .setRetryCount(3);
-        CrashHandler.getInstance().init(this);
+//        CrashHandler.getInstance().init(this);
     }
 }

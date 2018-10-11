@@ -99,24 +99,22 @@ public class HttpDownManager{
         subscriber.setHttpDownManager(this);
         //记录回调sub 如果有多个任务下载,将任务放在map结合中
         subMap.put(info.getUrl(), subscriber);
-        StubPreferences.setStringValue(String.valueOf(info.getPath()),"");//保存下载进度
-        String path = info.getPath()+"/";
-        final String finalPath = path;
+        //用来记录没有下载的.ts视频片段默认为空
+        StubPreferences.setStringValue(String.valueOf(info.getPath()),"");
         if(hasDown){
             LinkedHashMap downloaderHashMap=info.getDownloaderHashMap();
             HttpDownService httpDownService = info.getService();
             int i = Integer.parseInt(info.getDownIndex());
             info.setDownloaderHashMap(downloaderHashMap);
             info.setDownIndex(String.valueOf(i));
-            downLoadTsVideos(info, downloaderHashMap, subscriber, httpDownService);
+            downLoadTsVideos(info, downloaderHashMap, subscriber);
             return;
         }
-
         // 没有下载过的 先下载 .m3u8 文件
-
-//        String loadPath3u8 = "http://cdnaliyunv.tianguiedu.com/201803/e342b754-6ae3-4d55-bef6-dbfef14d94c0/low.m3u8";
         String loadPath3u8 = "http://cdnaliyunv.tianguiedu.com/201802/3ed31f9f-d30b-4c06-8eba-cd2e39f2a146/low.m3u8";
-        OkGo.<File>get(loadPath3u8).tag(HttpDownManager.this).execute(new FileCallback(finalPath, "output.m3u8") {
+        //用来存储 下载完的视频文件；
+        String path = info.getPath()+"/";
+        OkGo.<File>get(loadPath3u8).tag(HttpDownManager.this).execute(new FileCallback(path, "output.m3u8") {
             @Override
             public void onSuccess(Response<File> response) {
                 Log.d("XIAZAIZHONG", response.body().toString());
@@ -130,16 +128,21 @@ public class HttpDownManager{
             @Override
             public void onFinish() {
                 super.onFinish();
-                String s = finalPath + "output.m3u8";
-                final String fileContent = FileManager.ReadTxtFile(s);
+                //下载完的 .m3u8文件路径
+                String saveM3u8Path=info.getPath()+"/"+"output.m3u8";
+                //读取下载的文件内容
+                final String m3u8Content = FileManager.ReadTxtFile(saveM3u8Path);
+                //正则 匹配.m3u8文件中的key
                 Pattern kp = Pattern
                         .compile("(?<=\").*?.key(?=\")");
-                final Matcher km = kp.matcher(fileContent);
+                final Matcher km = kp.matcher(m3u8Content);
                 if (km.find()) {
                     //下载KEY文件保存到本地
-                    final String keyPath = finalPath + "mykey.key";
+                    String rootFile = info.getPath() + "/";
+                    final String keyPath =  rootFile+ "mykey.key";
+                    //下载KEY 的路径
                     String downKeyUrl = "http://cdnaliyunv.tianguiedu.com" + km.group();
-                    OkGo.<File>get(downKeyUrl).tag(HttpDownManager.this).execute(new FileCallback(finalPath, "mykey.key") {
+                    OkGo.<File>get(downKeyUrl).tag(HttpDownManager.this).execute(new FileCallback(rootFile, "mykey.key") {
                         @Override
                         public void onSuccess(Response<File> response) {
 
@@ -153,51 +156,45 @@ public class HttpDownManager{
                         @Override
                         public void onFinish() {
                             super.onFinish();
-                            //替换KEY下载路径为保存路径
+                            //1替换KEY下载路径为保存路径
                             String group = km.group();
-                            String replacecontent = fileContent.replace(group, keyPath);
-                            //替换视频片段的下载地址为保存路径
+                            String replacecontent = m3u8Content.replace(group, keyPath);
+                            //2替换视频片段的下载地址为保存路径
                             Pattern p = Pattern
                                     .compile("[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}/output\\d+.ts");
                             Matcher m = p.matcher(replacecontent);
                             int i = 0;
                             LinkedHashMap<String, String> downloaderHashMap = info.getDownloaderHashMap();
                             while (m.find()) {
-
                                 String videoPath = i + ".ts";
                                 downloaderHashMap.put(videoPath, m.group());
                                 i++;
                                 replacecontent = replacecontent.replace(m.group(), videoPath);//替换后的文档内容
                             }
                             info.setDownloaderHashMap(downloaderHashMap);
-                            //保存替换完的文件
+                            //3保存替换完的文件
                             String newSavePath = info.getPath() + "/newoutput.m3u8";
                             FileManager.WriteTxtFile(replacecontent, newSavePath);
                             info.setDownIndex(0 + "");
-                            //获取service,多次请求公用一个service
-                            final HttpDownService httpDownService;
-                            if (downInfos.contains(info)) {
-                                httpDownService = info.getService();
-                            } else {
-                                //得到RX对象上一次下载的位置开始下载
-                                DownloadInterceptor interceptor = new DownloadInterceptor(subscriber,downloaderHashMap.keySet().size(),String.valueOf(info.getId()));
-                                OkHttpClient.Builder builder = new OkHttpClient.Builder();
-                                //手动创建一个OkHttpClient并设置超时时间
-                                builder.connectTimeout(6, TimeUnit.SECONDS);
-                                builder.addInterceptor(interceptor);
+                            //4下载片段
 
-                                Retrofit retrofit = new Retrofit.Builder()
-                                        .client(builder.build())
-                                        .addConverterFactory(GsonConverterFactory.create())
-                                        .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
+                            //下载的拦截器
+                            DownloadInterceptor interceptor = new DownloadInterceptor(subscriber,downloaderHashMap.keySet().size(),String.valueOf(info.getId()));
+                            OkHttpClient.Builder builder = new OkHttpClient.Builder();
+                            builder.connectTimeout(6, TimeUnit.SECONDS);
+                            builder.addInterceptor(interceptor);
+                            Retrofit retrofit = new Retrofit.Builder()
+                                    .client(builder.build())
+                                    .addConverterFactory(GsonConverterFactory.create())
+                                    .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
 //                    .baseUrl(Urls.SERVER_URL)
-                                        .baseUrl("http://cdnaliyunv.tianguiedu.com/")
-                                        .build();
-                                httpDownService = retrofit.create(HttpDownService.class);
+                                    .baseUrl("http://cdnaliyunv.tianguiedu.com/")
+                                    .build();
+                            HttpDownService httpDownService = retrofit.create(HttpDownService.class);
                                 info.setService(httpDownService);
                                 downInfos.add(info);
-                            }
-                            downLoadTsVideos(info, downloaderHashMap, subscriber, httpDownService);
+                                //开始下载
+                            downLoadTsVideos(info, downloaderHashMap, subscriber);
                         }
                     });
                 }
@@ -207,7 +204,7 @@ public class HttpDownManager{
 
     }
 
-    private void downLoadTsVideos(final LiveLesson mInfo, final LinkedHashMap<String, String> mDownloaderHashMap, ProgressDownSubscriber mSubscriber, final HttpDownService mHttpDownService) {
+    private void downLoadTsVideos(final LiveLesson mInfo, final LinkedHashMap<String, String> mDownloaderHashMap, ProgressDownSubscriber mSubscriber) {
         //得到RX对象上一次下载的位置开始下载
         final String downIndex = mInfo.getDownIndex();
         int size = mDownloaderHashMap.entrySet().size();//一共的视频下载个数
@@ -230,17 +227,22 @@ public class HttpDownManager{
                 indexText=indexText+key+",";
             }
         }
+        //保存还没有下载的视频序号
         StubPreferences.setStringValue(String.valueOf(mInfo.getId()),indexText);
+        //通过Rxjava 有序的concatMap 方法来一个一个片段下载视频片段
         Observable.from(values)
                 .subscribeOn(Schedulers.io())
                 .observeOn(Schedulers.io())
                 .concatMap(new Func1<String, Observable<ResponseBody>>() {
                     @Override
                     public Observable<ResponseBody> call(String tsUrl) {
-
+                        //视频的片段路径的拼接；
                         String url = new String(MessageFormat.format("{0}?app=android&ukey={1}{2}", "http://cdnaliyunv.tianguiedu.com/201802/3ed31f9f-d30b-4c06-8eba-cd2e39f2a146/" + tsUrl,
                                 "461", System.currentTimeMillis()));
-                        Observable<ResponseBody> download = mHttpDownService.download("bytes=0" + "-", url);
+                        //获取到service
+                        HttpDownService service = mInfo.getService();
+                        //每一个片段都是重弟0个字节开始读取下载
+                        Observable<ResponseBody> download = service.download("bytes=0" + "-", url);
                         return download;
                     }
                 })
@@ -249,12 +251,17 @@ public class HttpDownManager{
                     @Override
                     public Object call(ResponseBody mResponseBody) {
                         try {
-                            //写文件(真正写是在这里)
+                            //下载完的ResposneBody 写到文件里
+
+                            //先取出保存的应该下载的文件序列号
                             String stringValue = StubPreferences.getStringValue(String.valueOf(mInfo.getId()));
+                            //得到数组
                             String[] split = stringValue.split(",");
+                            //得到应该下载的位置
                             String[] split1 = split[0].split("\\.");
                             String substring = split1[0];
                             int i = Integer.parseInt(substring);
+                            //写入文件；
                             writeCache(mResponseBody, new File(mInfo.getPath() + "/" + i + ".ts"), mInfo,i,stringValue);
                         } catch (IOException e) {
                             /*失败抛出异常*/
@@ -307,6 +314,7 @@ public class HttpDownManager{
             if (randomAccessFile != null) {
                 randomAccessFile.close();
             }
+            //片段下载完后保存位置
             String s = i + ".ts,";
             String substring = value.substring(s.length(),value.length());
             StubPreferences.setStringValue(String.valueOf(mInfo.getId()), substring);

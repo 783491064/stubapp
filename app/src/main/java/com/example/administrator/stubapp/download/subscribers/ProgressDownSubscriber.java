@@ -73,6 +73,7 @@ public class ProgressDownSubscriber<T> extends Subscriber<T> implements Download
     public void update(long read, final long count, final boolean done) {
         if(done){
             downInfo.setDownlength(count);
+            downInfo.setState(DownState.FINISH);
         }else{
             downInfo.setDownlength(read);
         }
@@ -84,16 +85,15 @@ public class ProgressDownSubscriber<T> extends Subscriber<T> implements Download
                         //如果暂停或者停止状态延迟，不需要继续发送回调，影响现实
                         if (downInfo.getState() == DownState.PAUSE || downInfo.getState() == DownState.STOP)
                             return;
-                        if(done){
-                            downInfo.setState(DownState.DOWN);
-                        }
                         if (manager != null) {
+                            //刷新下载状态
                             manager.notifyDownloadStateChanged(downInfo);
+                            //刷新进度条
                             manager.notifyDownloadProgressed(downInfo);
                         }
-                        if (mSubscriberOnNextListener.get() != null) {
-                            mSubscriberOnNextListener.get().updateProgress(mLong, count);
-                        }
+//                        if (mSubscriberOnNextListener.get() != null) {
+//                            mSubscriberOnNextListener.get().updateProgress(mLong, count);
+//                        }
                     }
                 });
     }
