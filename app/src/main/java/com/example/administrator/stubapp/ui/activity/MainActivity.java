@@ -1,6 +1,7 @@
 package com.example.administrator.stubapp.ui.activity;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -25,6 +26,8 @@ import com.example.administrator.stubapp.download.downloadListener.HttpDownOnNex
 import com.example.administrator.stubapp.presenter.MainPresenter;
 import com.example.administrator.stubapp.base.BaseMVPActivity;
 import com.example.administrator.stubapp.view.MainView;
+
+import junit.framework.Test;
 
 import java.io.File;
 
